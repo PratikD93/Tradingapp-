@@ -5,14 +5,24 @@ import time
 
 st.title("One-Page Trading App")
 
-# Function to fetch live stock prices
+# Function to fetch live stock prices with caching
 def get_live_price(symbol):
+    current_time = time.time()
+    if 'price_cache' not in st.session_state:
+        st.session_state.price_cache = {}
+
+    if symbol in st.session_state.price_cache:
+        cached_price, cached_time = st.session_state.price_cache[symbol]
+        if current_time - cached_time < 60:  # Cache for 60 seconds
+            return cached_price
+
     try:
         url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}.NS?region=IN&lang=en-IN&includePrePost=false&interval=2m&range=1d"
         response = requests.get(url)
         response.raise_for_status()
         data = response.json()
         live_price = data['chart']['result'][0]['meta']['regularMarketPrice']
+        st.session_state.price_cache[symbol] = (live_price, current_time)
         return live_price
     except requests.exceptions.RequestException as e:
         st.error(f"Error fetching price for {symbol}: {e}")
@@ -37,10 +47,9 @@ if 'df' not in st.session_state:
 
 df = st.session_state.df
 
-# Fetch live prices with delay
+# Fetch live prices with caching
 for i in range(len(df)):
     df.loc[i, "CMP"] = get_live_price(df.loc[i, "Scrip Name"])
-    time.sleep(1)
 
 # Allow users to input data
 for i in range(len(df)):
