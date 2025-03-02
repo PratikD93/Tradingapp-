@@ -1,109 +1,116 @@
 import streamlit as st
 import pandas as pd
-import requests
+from kiteconnect import KiteConnect
 import time
 
 st.title("One-Page Trading App")
 
-# Function to fetch live stock prices with caching
-def get_live_price(symbol):
-    current_time = time.time()
-    if 'price_cache' not in st.session_state:
-        st.session_state.price_cache = {}
+# API Key Input
+api_key = st.text_input("Enter Zerodha API Key:")
+api_secret = st.text_input("Enter Zerodha API Secret:", type="password")
 
-    if symbol in st.session_state.price_cache:
-        cached_price, cached_time = st.session_state.price_cache[symbol]
-        if current_time - cached_time < 60:  # Cache for 60 seconds
-            return cached_price
-
+if api_key and api_secret:
     try:
-        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}.NS?region=IN&lang=en-IN&includePrePost=false&interval=2m&range=1d"
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
-        live_price = data['chart']['result'][0]['meta']['regularMarketPrice']
-        st.session_state.price_cache[symbol] = (live_price, current_time)
-        return live_price
-    except requests.exceptions.RequestException as e:
-        st.error(f"Error fetching price for {symbol}: {e}")
-        return 0.0
-    except (KeyError, IndexError, TypeError) as e:
-        st.error(f"Error parsing data for {symbol}: {e}")
-        return 0.0
+        kite = KiteConnect(api_key=api_key)
+        login_url = kite.login_url()
+        st.write(f"Login: {login_url}")
+        request_token = st.text_input("Enter request token:")
 
-# Initialize session state
-if 'df' not in st.session_state:
-    data = {
-        "Scrip Name": ["TCS", "INFY", "HDFC", "AXISBANK", "HUL", "ITC", "TATASTEEL"],
-        "CMP": [0.0] * 7,
-        "Limit Price": [0.0] * 7,
-        "Stop Loss": [0.0] * 7,
-        "Target": [0.0] * 7,
-        "Qty": [0] * 7,
-        "Action": ["Buy"] * 7,
-        "Order Status": [""] * 7,
-    }
-    st.session_state.df = pd.DataFrame(data)
+        if request_token:
+            data = kite.generate_session(request_token, api_secret=api_secret)
+            kite.set_access_token(data["access_token"])
 
-df = st.session_state.df
+            # Example: Fetch live prices (replace with actual instrument tokens)
+            instrument_tokens = [738561]  # Example: TCS
+            live_prices = kite.ltp(instrument_tokens)
+            st.write(f"Live Prices: {live_prices}")
 
-# Fetch live prices with caching
-for i in range(len(df)):
-    df.loc[i, "CMP"] = get_live_price(df.loc[i, "Scrip Name"])
+            # Initialize session state
+            if 'df' not in st.session_state:
+                data = {
+                    "Scrip Name": ["TCS", "INFY", "HDFC", "AXISBANK", "HUL", "ITC", "TATASTEEL"],
+                    "CMP": [0.0] * 7,
+                    "Limit Price": [0.0] * 7,
+                    "Stop Loss": [0.0] * 7,
+                    "Target": [0.0] * 7,
+                    "Qty": [0] * 7,
+                    "Action": ["Buy"] * 7,
+                    "Order Status": [""] * 7,
+                }
+                st.session_state.df = pd.DataFrame(data)
 
-# Allow users to input data
-for i in range(len(df)):
-    df.loc[i, "Limit Price"] = st.number_input(f"Limit Price for {df.loc[i, 'Scrip Name']}", value=0.0, key=f"limit_{i}")
-    df.loc[i, "Stop Loss"] = st.number_input(f"Stop Loss for {df.loc[i, 'Scrip Name']}", value=0.0, key=f"sl_{i}")
-    df.loc[i, "Target"] = st.number_input(f"Target for {df.loc[i, 'Scrip Name']}", value=0.0, key=f"target_{i}")
-    df.loc[i, "Qty"] = st.number_input(f"Qty for {df.loc[i, 'Scrip Name']}", value=0, key=f"qty_{i}")
+            df = st.session_state.df
 
-# Add scrip name
-new_scrip = st.text_input("Add New Scrip")
-if st.button("Add Scrip"):
-    if new_scrip:
-        new_row = {
-            "Scrip Name": new_scrip,
-            "CMP": get_live_price(new_scrip),
-            "Limit Price": 0.0,
-            "Stop Loss": 0.0,
-            "Target": 0.0,
-            "Qty": 0,
-            "Action": "Buy",
-            "Order Status": "",
-        }
-        st.session_state.df = st.session_state.df.append(new_row, ignore_index=True)
-        df = st.session_state.df
+            # Fetch live prices (using kite object)
+            for i in range(len(df)):
+                try:
+                    instrument_token = kite.instruments(exchange=kite.EXCHANGE_NSE, tradingsymbol=df.loc[i, "Scrip Name"])[0]['instrument_token']
+                    live_price = kite.ltp([instrument_token])[str(instrument_token)]['last_price']
+                    df.loc[i, "CMP"] = live_price
+                except:
+                    df.loc[i, "CMP"] = 0
 
-# Sorting
-sort_order = st.radio("Sort Scrip Names", ["Ascending", "Descending"])
-if sort_order == "Ascending":
-    st.session_state.df = st.session_state.df.sort_values(by="Scrip Name")
-else:
-    st.session_state.df = st.session_state.df.sort_values(by="Scrip Name", ascending=False)
+            # Allow users to input data
+            for i in range(len(df)):
+                df.loc[i, "Limit Price"] = st.number_input(f"Limit Price for {df.loc[i, 'Scrip Name']}", value=0.0, key=f"limit_{i}")
+                df.loc[i, "Stop Loss"] = st.number_input(f"Stop Loss for {df.loc[i, 'Scrip Name']}", value=0.0, key=f"sl_{i}")
+                df.loc[i, "Target"] = st.number_input(f"Target for {df.loc[i, 'Scrip Name']}", value=0.0, key=f"target_{i}")
+                df.loc[i, "Qty"] = st.number_input(f"Qty for {df.loc[i, 'Scrip Name']}", value=0, key=f"qty_{i}")
 
-df = st.session_state.df
+            # Add scrip name
+            new_scrip = st.text_input("Add New Scrip")
+            if st.button("Add Scrip"):
+                if new_scrip:
+                    try:
+                        instrument_token = kite.instruments(exchange=kite.EXCHANGE_NSE, tradingsymbol=new_scrip)[0]['instrument_token']
+                        new_cmp = kite.ltp([instrument_token])[str(instrument_token)]['last_price']
+                    except:
+                        new_cmp = 0
+                    new_row = {
+                        "Scrip Name": new_scrip,
+                        "CMP": new_cmp,
+                        "Limit Price": 0.0,
+                        "Stop Loss": 0.0,
+                        "Target": 0.0,
+                        "Qty": 0,
+                        "Action": "Buy",
+                        "Order Status": "",
+                    }
+                    st.session_state.df = st.session_state.df.append(new_row, ignore_index=True)
+                    df = st.session_state.df
 
-# Display the DataFrame
-st.dataframe(df)
+            # Sorting
+            sort_order = st.radio("Sort Scrip Names", ["Ascending", "Descending"])
+            if sort_order == "Ascending":
+                st.session_state.df = st.session_state.df.sort_values(by="Scrip Name")
+            else:
+                st.session_state.df = st.session_state.df.sort_values(by="Scrip Name", ascending=False)
 
-# Simulate order placement, execution, and closure
-if st.button("Place Orders"):
-    for i in range(len(df)):
-        if df.loc[i, "Order Status"] == "":
-            df.loc[i, "Order Status"] = "Placed"
-            st.write(f"Order placed for {df.loc[i, 'Scrip Name']}")
+            df = st.session_state.df
 
-    for i in range(len(df)):
-        if df.loc[i, "Order Status"] == "Placed":
-            if df.loc[i, "CMP"] >= df.loc[i, "Limit Price"]:
-                df.loc[i, "Order Status"] = "Executed"
-                st.write(f"Order executed for {df.loc[i, 'Scrip Name']}")
-            if df.loc[i, "Order Status"] == "Executed":
-                if df.loc[i, "CMP"] <= df.loc[i, "Stop Loss"]:
-                    df.loc[i, "Order Status"] = "Closed (Stop Loss)"
-                    st.write(f"Order closed for {df.loc[i, 'Scrip Name']} (Stop Loss)")
-                elif df.loc[i, "CMP"] >= df.loc[i, "Target"]:
-                    df.loc[i, "Order Status"] = "Closed (Target)"
-                    st.write(f"Order closed for {df.loc[i, 'Scrip Name']} (Target)")
-    st.session_state.df = df
+            # Display the DataFrame
+            st.dataframe(df)
+
+            # Simulate order placement, execution, and closure
+            if st.button("Place Orders"):
+                for i in range(len(df)):
+                    if df.loc[i, "Order Status"] == "":
+                        df.loc[i, "Order Status"] = "Placed"
+                        st.write(f"Order placed for {df.loc[i, 'Scrip Name']}")
+
+                for i in range(len(df)):
+                    if df.loc[i, "Order Status"] == "Placed":
+                        if df.loc[i, "CMP"] >= df.loc[i, "Limit Price"]:
+                            df.loc[i, "Order Status"] = "Executed"
+                            st.write(f"Order executed for {df.loc[i, 'Scrip Name']}")
+                        if df.loc[i, "Order Status"] == "Executed":
+                            if df.loc[i, "CMP"] <= df.loc[i, "Stop Loss"]:
+                                df.loc[i, "Order Status"] = "Closed (Stop Loss)"
+                                st.write(f"Order closed for {df.loc[i, 'Scrip Name']} (Stop Loss)")
+                            elif df.loc[i, "CMP"] >= df.loc[i, "Target"]:
+                                df.loc[i, "Order Status"] = "Closed (Target)"
+                                st.write(f"Order closed for {df.loc[i, 'Scrip Name']} (Target)")
+                st.session_state.df = df
+
+    except Exception as e:
+        st.error(f"Error: {e}")
