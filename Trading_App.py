@@ -29,12 +29,11 @@ if st.button("Simulate Live Prices"):
             df.loc[i, "CMP"] = 0 #Ensure that the price does not go below 0.
     st.session_state.df = df
 
-# Allow users to input data
-for i in range(len(df)):
-    df.loc[i, "Limit Price"] = st.number_input(f"Limit Price for {df.loc[i, 'Scrip Name']}", value=0.0, key=f"limit_{i}")
-    df.loc[i, "Stop Loss"] = st.number_input(f"Stop Loss for {df.loc[i, 'Scrip Name']}", value=0.0, key=f"sl_{i}")
-    df.loc[i, "Target"] = st.number_input(f"Target for {df.loc[i, 'Scrip Name']}", value=0.0, key=f"target_{i}")
-    df.loc[i, "Qty"] = st.number_input(f"Qty for {df.loc[i, 'Scrip Name']}", value=0, key=f"qty_{i}")
+# Allow users to input data directly in the table
+edited_df = st.data_editor(df, num_rows="dynamic")
+
+# Update session state with edited data
+st.session_state.df = edited_df
 
 # Add scrip name
 new_scrip = st.text_input("Add New Scrip")
@@ -72,7 +71,7 @@ if st.button("Place Orders"):
             df.loc[i, "Order Status"] = "Placed"
             st.write(f"Order placed for {df.loc[i, 'Scrip Name']}")
 
-    for i in range(len(df)):
+    for i in range(len(df):
         if df.loc[i, "Order Status"] == "Placed":
             if df.loc[i, "CMP"] >= df.loc[i, "Limit Price"]:
                 df.loc[i, "Order Status"] = "Executed"
