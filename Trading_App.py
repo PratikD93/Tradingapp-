@@ -5,19 +5,24 @@ import datetime
 
 st.title("One-Page Trading App")
 
-# Function to fetch previous day's closing price
-def get_previous_day_close(symbol):
-    today = datetime.date.today()
-    yesterday = today - datetime.timedelta(days=1)
-    date_string = yesterday.strftime("%Y-%m-%d")
+# Function to fetch closing price for a specific date
+def get_specific_date_close(symbol, target_date):
+    date_string = target_date.strftime("%Y-%m-%d")
 
     try:
-        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}.NS?region=IN&lang=en-IN&includePrePost=false&interval=1d&range=2d"
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}.NS?region=IN&lang=en-IN&includePrePost=false&interval=1d&range=365d"
         response = requests.get(url)
         response.raise_for_status()
         data = response.json()
-        previous_day_close = data['chart']['result'][0]['indicators']['quote'][0]['close'][0]
-        return previous_day_close
+        timestamps = data['chart']['result'][0]['timestamp']
+        closes = data['chart']['result'][0]['indicators']['quote'][0]['close']
+
+        for i, timestamp in enumerate(timestamps):
+            date = datetime.datetime.fromtimestamp(timestamp).date()
+            if date == target_date.date():
+                return closes[i]
+
+        return 0.0  # Return 0.0 if date not found
     except requests.exceptions.RequestException as e:
         st.error(f"Error fetching price for {symbol}: {e}")
         return 0.0
@@ -41,9 +46,10 @@ if 'df' not in st.session_state:
 
 df = st.session_state.df
 
-# Fetch previous day's closing prices
+# Fetch closing prices for the specific date
+target_date = datetime.datetime(2024, 2, 28) #Here is the changed date.
 for i in range(len(df)):
-    df.loc[i, "CMP"] = get_previous_day_close(df.loc[i, "Scrip Name"])
+    df.loc[i, "CMP"] = get_specific_date_close(df.loc[i, "Scrip Name"], target_date)
 
 # Allow users to input data
 for i in range(len(df)):
@@ -58,7 +64,7 @@ if st.button("Add Scrip"):
     if new_scrip:
         new_row = {
             "Scrip Name": new_scrip,
-            "CMP": get_previous_day_close(new_scrip),
+            "CMP": get_specific_date_close(new_scrip, target_date),
             "Limit Price": 0.0,
             "Stop Loss": 0.0,
             "Target": 0.0,
