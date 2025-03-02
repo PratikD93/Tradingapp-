@@ -3,7 +3,7 @@ import pandas as pd
 import random
 import time
 
-st.title("One-Page Trading App (Automated)")
+st.title("One-Page Trading App (Detailed)")
 
 # Initialize session state
 if 'df' not in st.session_state:
@@ -38,30 +38,30 @@ for i in range(len(df)):
 # Simulate live prices and automatic order closure
 while True:
     for i in range(len(df)):
-        if df.loc[i, "Order Status"] == "Placed":
+        # Generate random CMP every 10 seconds
+        if time.time() % 10 < 5:  # Generate new CMP in the first 5 seconds
             df.loc[i, "CMP"] += random.uniform(-10, 10)
             if df.loc[i, "CMP"] < 0:
                 df.loc[i, "CMP"] = 0
+
+        if df.loc[i, "Order Status"] == "Placed":
             if df.loc[i, "CMP"] >= df.loc[i, "Limit Price"]:
                 df.loc[i, "Order Status"] = "Executed"
                 st.write(f"Order executed for {df.loc[i, 'Scrip Name']}")
         if df.loc[i, "Order Status"] == "Executed":
-            df.loc[i, "CMP"] += random.uniform(-10, 10)
-            if df.loc[i, "CMP"] < 0:
-                df.loc[i, "CMP"] = 0
             if df.loc[i, "CMP"] <= df.loc[i, "Stop Loss"]:
                 df.loc[i, "Order Status"] = "Closed (Stop Loss)"
                 df.loc[i, "Profit/Loss"] = (df.loc[i, "Limit Price"] - df.loc[i, "Stop Loss"]) * df.loc[i, "Qty"]
                 st.write(f"Order closed for {df.loc[i, 'Scrip Name']} (Stop Loss)")
-                st.write(f"Profit/Loss: {df.loc[i, 'Profit/Loss']} Rupees")
+                st.write(f"Loss: {df.loc[i, 'Profit/Loss']} Rupees")
             elif df.loc[i, "CMP"] >= df.loc[i, "Target"]:
                 df.loc[i, "Order Status"] = "Closed (Target)"
                 df.loc[i, "Profit/Loss"] = (df.loc[i, "Target"] - df.loc[i, "Limit Price"]) * df.loc[i, "Qty"]
                 st.write(f"Order closed for {df.loc[i, 'Scrip Name']} (Target)")
-                st.write(f"Profit/Loss: {df.loc[i, 'Profit/Loss']} Rupees")
+                st.write(f"Profit: {df.loc[i, 'Profit/Loss']} Rupees")
     st.session_state.df = df
     st.dataframe(df)
-    time.sleep(5)  # Wait for 5 seconds
+    time.sleep(5)  # Check every 5 seconds
 
 # Add scrip name
 new_scrip = st.text_input("Add New Scrip")
