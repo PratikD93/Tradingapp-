@@ -1,40 +1,15 @@
 import streamlit as st
 import pandas as pd
-import requests
-import datetime
+import random
+import time
 
-st.title("One-Page Trading App")
-
-# Function to fetch closing price for a specific date
-def get_specific_date_close(symbol, target_date):
-    date_string = target_date.strftime("%Y-%m-%d")
-
-    try:
-        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}.NS?region=IN&lang=en-IN&includePrePost=false&interval=1d&range=365d"
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
-        timestamps = data['chart']['result'][0]['timestamp']
-        closes = data['chart']['result'][0]['indicators']['quote'][0]['close']
-
-        for i, timestamp in enumerate(timestamps):
-            date = datetime.datetime.fromtimestamp(timestamp).date()
-            if date == target_date.date():
-                return closes[i]
-
-        return 0.0  # Return 0.0 if date not found
-    except requests.exceptions.RequestException as e:
-        st.error(f"Error fetching price for {symbol}: {e}")
-        return 0.0
-    except (KeyError, IndexError, TypeError) as e:
-        st.error(f"Error parsing data for {symbol}: {e}")
-        return 0.0
+st.title("One-Page Trading App (Testing)")
 
 # Initialize session state
 if 'df' not in st.session_state:
     data = {
         "Scrip Name": ["TCS", "INFY", "HDFC", "AXISBANK", "HUL", "ITC", "TATASTEEL"],
-        "CMP": [0.0] * 7,
+        "CMP": [random.uniform(1000, 4000) for _ in range(7)],  # Random initial CMP
         "Limit Price": [0.0] * 7,
         "Stop Loss": [0.0] * 7,
         "Target": [0.0] * 7,
@@ -46,10 +21,13 @@ if 'df' not in st.session_state:
 
 df = st.session_state.df
 
-# Fetch closing prices for the specific date
-target_date = datetime.datetime(2024, 2, 28) #Here is the changed date.
-for i in range(len(df)):
-    df.loc[i, "CMP"] = get_specific_date_close(df.loc[i, "Scrip Name"], target_date)
+# Simulate live prices (random fluctuations)
+if st.button("Simulate Live Prices"):
+    for i in range(len(df)):
+        df.loc[i, "CMP"] += random.uniform(-10, 10)  # Simulate price fluctuations
+        if df.loc[i, "CMP"] < 0:
+            df.loc[i, "CMP"] = 0 #Ensure that the price does not go below 0.
+    st.session_state.df = df
 
 # Allow users to input data
 for i in range(len(df)):
@@ -64,7 +42,7 @@ if st.button("Add Scrip"):
     if new_scrip:
         new_row = {
             "Scrip Name": new_scrip,
-            "CMP": get_specific_date_close(new_scrip, target_date),
+            "CMP": random.uniform(1000, 4000), #Random initial CMP
             "Limit Price": 0.0,
             "Stop Loss": 0.0,
             "Target": 0.0,
