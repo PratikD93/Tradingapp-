@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import requests
+import time
 
 st.title("One-Page Trading App")
 
@@ -36,9 +37,10 @@ if 'df' not in st.session_state:
 
 df = st.session_state.df
 
-# Fetch live prices
+# Fetch live prices with delay
 for i in range(len(df)):
     df.loc[i, "CMP"] = get_live_price(df.loc[i, "Scrip Name"])
+    time.sleep(1)
 
 # Allow users to input data
 for i in range(len(df)):
