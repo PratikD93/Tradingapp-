@@ -23,14 +23,14 @@ if 'df' not in st.session_state:
 df = st.session_state.df
 
 # Allow users to input data directly in the table (outside the loop)
-edited_df = st.data_editor(df, num_rows="dynamic")
+edited_df = st.data_editor(df, num_rows="dynamic", key="data_editor") #added key
 
 # Update session state with edited data
 st.session_state.df = edited_df
 
 # Simulate live prices and automatic order closure
 while True:
-    df = st.session_state.df #get the latest dataframe.
+    df = st.session_state.df.copy() #get a copy of the dataframe.
     for i in range(len(df)):
         # Generate random CMP every 10 seconds
         if time.time() % 10 < 5:
