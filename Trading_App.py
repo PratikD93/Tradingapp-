@@ -20,46 +20,48 @@ if 'df' not in st.session_state:
     }
     st.session_state.df = pd.DataFrame(data)
 
-df = st.session_state.df
-
-# Allow users to input data directly in the table (outside the loop)
-edited_df = st.data_editor(df, num_rows="dynamic", key="data_editor") #added key
-
-# Update session state with edited data
-st.session_state.df = edited_df
-
-# Simulate live prices and automatic order closure
-while True:
-    df = st.session_state.df.copy() #get a copy of the dataframe.
-    for i in range(len(df)):
-        # Generate random CMP every 10 seconds
+# Function to update CMP values
+def update_cmp():
+    for i in range(len(st.session_state.df)):
         if time.time() % 10 < 5:
-            df.loc[i, "CMP"] += random.uniform(-10, 10)
-            if df.loc[i, "CMP"] < 0:
-                df.loc[i, "CMP"] = 0
+            st.session_state.df.loc[i, "CMP"] += random.uniform(-10, 10)
+            if st.session_state.df.loc[i, "CMP"] < 0:
+                st.session_state.df.loc[i, "CMP"] = 0
 
-        if df.loc[i, "Action"] == "Buy" and df.loc[i, "Order Status"] == "":
-            df.loc[i, "Order Status"] = "Placed"
-            st.write(f"Order placed for {df.loc[i, 'Scrip Name']}")
+# Function to process orders
+def process_orders():
+    for i in range(len(st.session_state.df)):
+        if st.session_state.df.loc[i, "Action"] == "Buy" and st.session_state.df.loc[i, "Order Status"] == "":
+            st.session_state.df.loc[i, "Order Status"] = "Placed"
+            st.write(f"Order placed for {st.session_state.df.loc[i, 'Scrip Name']}")
 
-        if df.loc[i, "Order Status"] == "Placed":
-            if df.loc[i, "CMP"] >= df.loc[i, "Limit Price"]:
-                df.loc[i, "Order Status"] = "Executed"
-                st.write(f"Order executed for {df.loc[i, 'Scrip Name']}")
-        if df.loc[i, "Order Status"] == "Executed":
-            if df.loc[i, "CMP"] <= df.loc[i, "Stop Loss"]:
-                df.loc[i, "Order Status"] = "Closed (Stop Loss)"
-                df.loc[i, "Profit/Loss"] = (df.loc[i, "Limit Price"] - df.loc[i, "Stop Loss"]) * df.loc[i, "Qty"]
-                st.write(f"Order closed for {df.loc[i, 'Scrip Name']} (Stop Loss)")
-                st.write(f"Loss: {df.loc[i, 'Profit/Loss']} Rupees")
-            elif df.loc[i, "CMP"] >= df.loc[i, "Target"]:
-                df.loc[i, "Order Status"] = "Closed (Target)"
-                df.loc[i, "Profit/Loss"] = (df.loc[i, "Target"] - df.loc[i, "Limit Price"]) * df.loc[i, "Qty"]
-                st.write(f"Order closed for {df.loc[i, 'Scrip Name']} (Target)")
-                st.write(f"Profit: {df.loc[i, 'Profit/Loss']} Rupees")
+        if st.session_state.df.loc[i, "Order Status"] == "Placed":
+            if st.session_state.df.loc[i, "CMP"] >= st.session_state.df.loc[i, "Limit Price"]:
+                st.session_state.df.loc[i, "Order Status"] = "Executed"
+                st.write(f"Order executed for {st.session_state.df.loc[i, 'Scrip Name']}")
 
-    st.session_state.df = df #store the changes.
-    st.dataframe(df)
+        if st.session_state.df.loc[i, "Order Status"] == "Executed":
+            if st.session_state.df.loc[i, "CMP"] <= st.session_state.df.loc[i, "Stop Loss"]:
+                st.session_state.df.loc[i, "Order Status"] = "Closed (Stop Loss)"
+                st.session_state.df.loc[i, "Profit/Loss"] = (st.session_state.df.loc[i, "Limit Price"] - st.session_state.df.loc[i, "Stop Loss"]) * st.session_state.df.loc[i, "Qty"]
+                st.write(f"Order closed for {st.session_state.df.loc[i, 'Scrip Name']} (Stop Loss)")
+                st.write(f"Loss: {st.session_state.df.loc[i, 'Profit/Loss']} Rupees")
+            elif st.session_state.df.loc[i, "CMP"] >= st.session_state.df.loc[i, "Target"]:
+                st.session_state.df.loc[i, "Order Status"] = "Closed (Target)"
+                st.session_state.df.loc[i, "Profit/Loss"] = (st.session_state.df.loc[i, "Target"] - st.session_state.df.loc[i, "Limit Price"]) * st.session_state.df.loc[i, "Qty"]
+                st.write(f"Order closed for {st.session_state.df.loc[i, 'Scrip Name']} (Target)")
+                st.write(f"Profit: {st.session_state.df.loc[i, 'Profit/Loss']} Rupees")
+
+# Main loop
+while True:
+    # Display editable dataframe
+    edited_df = st.data_editor(st.session_state.df, num_rows="dynamic", key="data_editor")
+    st.session_state.df = edited_df
+
+    update_cmp()
+    process_orders()
+
+    st.dataframe(st.session_state.df)
     time.sleep(5)
 
 # Add scrip name
@@ -78,7 +80,6 @@ if st.button("Add Scrip"):
             "Profit/Loss": 0.0,
         }
         st.session_state.df = st.session_state.df.append(new_row, ignore_index=True)
-        df = st.session_state.df
 
 # Sorting
 sort_order = st.radio("Sort Scrip Names", ["Ascending", "Descending"])
@@ -87,7 +88,4 @@ if sort_order == "Ascending":
 else:
     st.session_state.df = st.session_state.df.sort_values(by="Scrip Name", ascending=False)
 
-df = st.session_state.df
-
-# Display the DataFrame
-st.dataframe(df)
+st.dataframe(st.session_state.df)
