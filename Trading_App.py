@@ -22,27 +22,25 @@ if 'df' not in st.session_state:
 
 df = st.session_state.df
 
-# Allow users to input data directly in the table
+# Allow users to input data directly in the table (outside the loop)
 edited_df = st.data_editor(df, num_rows="dynamic")
 
 # Update session state with edited data
 st.session_state.df = edited_df
-df = st.session_state.df
-
-# Place orders on "Buy" action
-for i in range(len(df)):
-    if df.loc[i, "Action"] == "Buy" and df.loc[i, "Order Status"] == "":
-        df.loc[i, "Order Status"] = "Placed"
-        st.write(f"Order placed for {df.loc[i, 'Scrip Name']}")
 
 # Simulate live prices and automatic order closure
 while True:
+    df = st.session_state.df #get the latest dataframe.
     for i in range(len(df)):
         # Generate random CMP every 10 seconds
         if time.time() % 10 < 5:
             df.loc[i, "CMP"] += random.uniform(-10, 10)
             if df.loc[i, "CMP"] < 0:
                 df.loc[i, "CMP"] = 0
+
+        if df.loc[i, "Action"] == "Buy" and df.loc[i, "Order Status"] == "":
+            df.loc[i, "Order Status"] = "Placed"
+            st.write(f"Order placed for {df.loc[i, 'Scrip Name']}")
 
         if df.loc[i, "Order Status"] == "Placed":
             if df.loc[i, "CMP"] >= df.loc[i, "Limit Price"]:
@@ -60,8 +58,8 @@ while True:
                 st.write(f"Order closed for {df.loc[i, 'Scrip Name']} (Target)")
                 st.write(f"Profit: {df.loc[i, 'Profit/Loss']} Rupees")
 
-    st.session_state.df = df
-    st.dataframe(df)  # Update the DataFrame in place
+    st.session_state.df = df #store the changes.
+    st.dataframe(df)
     time.sleep(5)
 
 # Add scrip name
