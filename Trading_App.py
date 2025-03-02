@@ -20,10 +20,7 @@ if api_key and api_secret:
             data = kite.generate_session(request_token, api_secret=api_secret)
             kite.set_access_token(data["access_token"])
 
-            # Example: Fetch live prices (replace with actual instrument tokens)
-            instrument_tokens = [738561]  # Example: TCS
-            live_prices = kite.ltp(instrument_tokens)
-            st.write(f"Live Prices: {live_prices}")
+            st.write("Authentication successful!")
 
             # Initialize session state
             if 'df' not in st.session_state:
