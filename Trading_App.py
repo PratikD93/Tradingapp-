@@ -29,20 +29,20 @@ def update_cmp():
 
 # Function to process orders
 def process_orders():
-    for i in range(len(st.session_state.df)):
-        if st.session_state.df.loc[i, "Action"] == "Buy" and 'order_placed' not in st.session_state:
-            st.session_state.order_placed = {}
+    if 'order_placed' not in st.session_state:
+        st.session_state.order_placed = {}
 
+    for i in range(len(st.session_state.df)):
         if st.session_state.df.loc[i, "Action"] == "Buy" and i not in st.session_state.order_placed:
             st.write(f"Order placed for {st.session_state.df.loc[i, 'Scrip Name']}")
             st.session_state.order_placed[i] = "Placed"
 
-        if st.session_state.df.loc[i, "Action"] == "Buy" and i in st.session_state.order_placed and st.session_state.order_placed[i] == "Placed":
+        if i in st.session_state.order_placed and st.session_state.order_placed[i] == "Placed":
             if st.session_state.df.loc[i, "CMP"] >= st.session_state.df.loc[i, "Limit Price"]:
                 st.write(f"Order executed for {st.session_state.df.loc[i, 'Scrip Name']}")
                 st.session_state.order_placed[i] = "Executed"
 
-        if st.session_state.df.loc[i, "Action"] == "Buy" and i in st.session_state.order_placed and st.session_state.order_placed[i] == "Executed":
+        if i in st.session_state.order_placed and st.session_state.order_placed[i] == "Executed":
             if st.session_state.df.loc[i, "CMP"] <= st.session_state.df.loc[i, "Stop Loss"]:
                 del st.session_state.order_placed[i]
                 st.session_state.df.loc[i, "Profit/Loss"] = (st.session_state.df.loc[i, "Limit Price"] - st.session_state.df.loc[i, "Stop Loss"]) * st.session_state.df.loc[i, "Qty"]
