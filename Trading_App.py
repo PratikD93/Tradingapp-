@@ -93,6 +93,6 @@ if st.button("Place Orders"):
                     df.loc[i, "Order Status"] = "Closed (Stop Loss)"
                     st.write(f"Order closed for {df.loc[i, 'Scrip Name']} (Stop Loss)")
                 elif df.loc[i, "CMP"] >= df.loc[i, "Target"]:
-                    df.loc[i, "Order Status"] = "Closed (Target)")
+                    df.loc[i, "Order Status"] = "Closed (Target)"
                     st.write(f"Order closed for {df.loc[i, 'Scrip Name']} (Target)")
     st.session_state.df = df
