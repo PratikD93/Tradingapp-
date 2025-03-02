@@ -15,7 +15,6 @@ if 'df' not in st.session_state:
         "Target": [0.0] * 7,
         "Qty": [0] * 7,
         "Action": ["Buy"] * 7,
-        "Order Status": [""] * 7,
         "Profit/Loss": [0.0] * 7,
     }
     st.session_state.df = pd.DataFrame(data)
@@ -31,23 +30,26 @@ def update_cmp():
 # Function to process orders
 def process_orders():
     for i in range(len(st.session_state.df)):
-        if st.session_state.df.loc[i, "Action"] == "Buy" and st.session_state.df.loc[i, "Order Status"] == "":
-            st.session_state.df.loc[i, "Order Status"] = "Placed"
+        if st.session_state.df.loc[i, "Action"] == "Buy" and 'order_placed' not in st.session_state:
+            st.session_state.order_placed = {}
+
+        if st.session_state.df.loc[i, "Action"] == "Buy" and i not in st.session_state.order_placed:
             st.write(f"Order placed for {st.session_state.df.loc[i, 'Scrip Name']}")
+            st.session_state.order_placed[i] = "Placed"
 
-        if st.session_state.df.loc[i, "Order Status"] == "Placed":
+        if st.session_state.df.loc[i, "Action"] == "Buy" and i in st.session_state.order_placed and st.session_state.order_placed[i] == "Placed":
             if st.session_state.df.loc[i, "CMP"] >= st.session_state.df.loc[i, "Limit Price"]:
-                st.session_state.df.loc[i, "Order Status"] = "Executed"
                 st.write(f"Order executed for {st.session_state.df.loc[i, 'Scrip Name']}")
+                st.session_state.order_placed[i] = "Executed"
 
-        if st.session_state.df.loc[i, "Order Status"] == "Executed":
+        if st.session_state.df.loc[i, "Action"] == "Buy" and i in st.session_state.order_placed and st.session_state.order_placed[i] == "Executed":
             if st.session_state.df.loc[i, "CMP"] <= st.session_state.df.loc[i, "Stop Loss"]:
-                st.session_state.df.loc[i, "Order Status"] = "Closed (Stop Loss)"
+                del st.session_state.order_placed[i]
                 st.session_state.df.loc[i, "Profit/Loss"] = (st.session_state.df.loc[i, "Limit Price"] - st.session_state.df.loc[i, "Stop Loss"]) * st.session_state.df.loc[i, "Qty"]
                 st.write(f"Order closed for {st.session_state.df.loc[i, 'Scrip Name']} (Stop Loss)")
                 st.write(f"Loss: {st.session_state.df.loc[i, 'Profit/Loss']} Rupees")
             elif st.session_state.df.loc[i, "CMP"] >= st.session_state.df.loc[i, "Target"]:
-                st.session_state.df.loc[i, "Order Status"] = "Closed (Target)"
+                del st.session_state.order_placed[i]
                 st.session_state.df.loc[i, "Profit/Loss"] = (st.session_state.df.loc[i, "Target"] - st.session_state.df.loc[i, "Limit Price"]) * st.session_state.df.loc[i, "Qty"]
                 st.write(f"Order closed for {st.session_state.df.loc[i, 'Scrip Name']} (Target)")
                 st.write(f"Profit: {st.session_state.df.loc[i, 'Profit/Loss']} Rupees")
@@ -76,7 +78,6 @@ if st.button("Add Scrip"):
             "Target": 0.0,
             "Qty": 0,
             "Action": "Buy",
-            "Order Status": "",
             "Profit/Loss": 0.0,
         }
         st.session_state.df = st.session_state.df.append(new_row, ignore_index=True)
