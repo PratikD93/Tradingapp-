@@ -39,7 +39,7 @@ for i in range(len(df)):
 while True:
     for i in range(len(df)):
         # Generate random CMP every 10 seconds
-        if time.time() % 10 < 5:  # Generate new CMP in the first 5 seconds
+        if time.time() % 10 < 5:
             df.loc[i, "CMP"] += random.uniform(-10, 10)
             if df.loc[i, "CMP"] < 0:
                 df.loc[i, "CMP"] = 0
@@ -59,9 +59,10 @@ while True:
                 df.loc[i, "Profit/Loss"] = (df.loc[i, "Target"] - df.loc[i, "Limit Price"]) * df.loc[i, "Qty"]
                 st.write(f"Order closed for {df.loc[i, 'Scrip Name']} (Target)")
                 st.write(f"Profit: {df.loc[i, 'Profit/Loss']} Rupees")
+
     st.session_state.df = df
-    st.dataframe(df)
-    time.sleep(5)  # Check every 5 seconds
+    st.dataframe(df)  # Update the DataFrame in place
+    time.sleep(5)
 
 # Add scrip name
 new_scrip = st.text_input("Add New Scrip")
