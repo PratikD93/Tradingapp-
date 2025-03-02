@@ -71,7 +71,7 @@ if st.button("Place Orders"):
             df.loc[i, "Order Status"] = "Placed"
             st.write(f"Order placed for {df.loc[i, 'Scrip Name']}")
 
-    for i in range(len(df):
+    for i in range(len(df)
         if df.loc[i, "Order Status"] == "Placed":
             if df.loc[i, "CMP"] >= df.loc[i, "Limit Price"]:
                 df.loc[i, "Order Status"] = "Executed"
