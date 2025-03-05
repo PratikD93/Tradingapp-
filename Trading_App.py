@@ -16,10 +16,13 @@ if 'df' not in st.session_state:
         "Qty": [0] * 7,
         "Action": ["Buy"] * 7,
         "Profit/Loss": [0.0] * 7,
-        "Buy Price": [0.0] * 7, #buy price column
-        "Sell Price": [0.0] * 7, # sell price column
+        "Buy Price": [0.0] * 7,
+        "Sell Price": [0.0] * 7,
     }
     st.session_state.df = pd.DataFrame(data)
+
+# Create a placeholder for the dataframe
+dataframe_placeholder = st.empty()
 
 # Function to update CMP values
 def update_cmp():
@@ -38,7 +41,7 @@ def process_orders():
         if st.session_state.df.loc[i, "Action"] == "Buy" and i not in st.session_state.order_placed:
             st.write(f"Order placed for {st.session_state.df.loc[i, 'Scrip Name']}")
             st.session_state.order_placed[i] = "Placed"
-            st.session_state.df.loc[i, "Buy Price"] = st.session_state.df.loc[i, "Limit Price"] #record buy price
+            st.session_state.df.loc[i, "Buy Price"] = st.session_state.df.loc[i, "Limit Price"]
 
         if i in st.session_state.order_placed and st.session_state.order_placed[i] == "Placed":
             if st.session_state.df.loc[i, "CMP"] >= st.session_state.df.loc[i, "Limit Price"]:
@@ -49,29 +52,30 @@ def process_orders():
             if st.session_state.df.loc[i, "CMP"] <= st.session_state.df.loc[i, "Stop Loss"]:
                 del st.session_state.order_placed[i]
                 st.session_state.df.loc[i, "Profit/Loss"] = (st.session_state.df.loc[i, "Limit Price"] - st.session_state.df.loc[i, "Stop Loss"]) * st.session_state.df.loc[i, "Qty"]
-                st.session_state.df.loc[i, "Sell Price"] = st.session_state.df.loc[i, "Stop Loss"] #record sell price
+                st.session_state.df.loc[i, "Sell Price"] = st.session_state.df.loc[i, "Stop Loss"]
                 st.write(f"Order closed for {st.session_state.df.loc[i, 'Scrip Name']} (Stop Loss)")
                 st.write(f"Loss: ({st.session_state.df.loc[i, 'Profit/Loss']}) Rupees")
             elif st.session_state.df.loc[i, "CMP"] >= st.session_state.df.loc[i, "Target"]:
                 del st.session_state.order_placed[i]
                 st.session_state.df.loc[i, "Profit/Loss"] = (st.session_state.df.loc[i, "Target"] - st.session_state.df.loc[i, "Limit Price"]) * st.session_state.df.loc[i, "Qty"]
-                st.session_state.df.loc[i, "Sell Price"] = st.session_state.df.loc[i, "Target"] #record sell price
+                st.session_state.df.loc[i, "Sell Price"] = st.session_state.df.loc[i, "Target"]
                 st.write(f"Order closed for {st.session_state.df.loc[i, 'Scrip Name']} (Target)")
                 st.write(f"Profit: {st.session_state.df.loc[i, 'Profit/Loss']} Rupees")
 
+# Display editable dataframe
+edited_df = st.data_editor(st.session_state.df, num_rows="dynamic", key="data_editor")
+
+# Update session state ONLY when the DataFrame is changed
+if not edited_df.equals(st.session_state.df):
+    st.session_state.df = edited_df
+
 # Main loop
 while True:
-    # Display editable dataframe
-    edited_df = st.data_editor(st.session_state.df, num_rows="dynamic", key="data_editor")
-
-    # Update session state ONLY when the DataFrame is changed
-    if not edited_df.equals(st.session_state.df):
-        st.session_state.df = edited_df
-
     update_cmp()
     process_orders()
 
-    st.dataframe(st.session_state.df)
+    dataframe_placeholder.dataframe(st.session_state.df) #update placeholder
+
     time.sleep(5)
 
 # Add scrip name
